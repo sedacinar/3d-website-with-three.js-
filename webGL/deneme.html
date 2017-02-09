@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>3D Web</title>
+  <style>
+    body {
+      background-color: #ffffff;
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="js/three.min.js"></script>
+<script src="js/TrackballControls.js"></script>
+<script src="js/CSS3DRenderer.js"></script>
+<script src="js/SkyShader.js"></script>
+<script src="js/dat.gui.min.js"></script>
+
+<script>
+  ///////////////////////////////////////////////////////////////////
+  // CSS3DRenderer Demo
+  // By Philippe Leefsma, July 2015
+  ///////////////////////////////////////////////////////////////////
+  //References:
+  //http://codereply.com/answer/83pofc/threejs-properly-blending-css3d-webgl.html
+  //http://learningthreejs.com/blog/2013/04/30/closing-the-gap-between-html-and-webgl/
+  var controls, camera, glScene, cssScene, glRenderer, cssRenderer,stats;
+  var sky, sunSphere;
+  ///////////////////////////////////////////////////////////////////
+  // Creates WebGL Renderer
+  //
+  ///////////////////////////////////////////////////////////////////
+  
+
+  
+  
+  
+  
+  function createGlRenderer() {
+    var glRenderer = new THREE.WebGLRenderer({alpha:true});
+   // glRenderer.setClearColor(0xECF8FF);
+    glRenderer.setPixelRatio(window.devicePixelRatio);
+    glRenderer.setSize(window.innerWidth, window.innerHeight);
+    glRenderer.domElement.style.position = 'absolute';
+    glRenderer.domElement.style.zIndex = 1;
+    glRenderer.domElement.style.top = 0;
+    return glRenderer;
+  }
+  ///////////////////////////////////////////////////////////////////
+  // Creates CSS Renderer
+  //
+  ///////////////////////////////////////////////////////////////////
+  function createCssRenderer() {
+    var cssRenderer = new THREE.CSS3DRenderer();
+    cssRenderer.setSize(window.innerWidth, window.innerHeight);
+    cssRenderer.domElement.style.position = 'absolute';
+    glRenderer.domElement.style.zIndex = 0;
+    cssRenderer.domElement.style.top = 0;
+    return cssRenderer;
+  }
+  ///////////////////////////////////////////////////////////////////
+  // Creates plane mesh
+  //
+  ///////////////////////////////////////////////////////////////////
+  function createPlane(w, h, position, rotation) {
+    var material = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      opacity: 0.0,
+      side: THREE.DoubleSide
+    });
+    var geometry = new THREE.PlaneGeometry(w, h);
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = position.x;
+    mesh.position.y = position.y;
+    mesh.position.z = position.z;
+    mesh.rotation.x = rotation.x;
+    mesh.rotation.y = rotation.y;
+    mesh.rotation.z = rotation.z;
+    return mesh;
+  }
+  ///////////////////////////////////////////////////////////////////
+  // Creates CSS object
+  //
+  ///////////////////////////////////////////////////////////////////
+  function createCssObject(w, h, position, rotation, url) {
+    var html = [
+      '<div style="width:' + w + 'px; height:' + h + 'px;">',
+      '<iframe src="' + url + '" width="' + w + '" height="' + h + '">',
+      '</iframe>',
+      '</div>'
+    ].join('\n');
+    var div = document.createElement('div');
+    $(div).html(html);
+    var cssObject = new THREE.CSS3DObject(div);
+    cssObject.position.x = position.x;
+    cssObject.position.y = position.y;
+    cssObject.position.z = position.z;
+   cssObject.rotation.x = rotation.x;
+   cssObject.rotation.y = rotation.y;
+    cssObject.rotation.z = rotation.z;
+    return cssObject;
+  }
+  ///////////////////////////////////////////////////////////////////
+  // Creates 3d webpage object
+  //
+  ///////////////////////////////////////////////////////////////////
+  function create3dPage(w, h, position, rotation, url) {
+    var plane = createPlane(
+        w, h,
+        position,
+        rotation);
+    glScene.add(plane);
+    var cssObject = createCssObject(
+        w, h,
+        position,
+        rotation,
+        url);
+    glScene.add(cssObject);
+  }
+  ///////////////////////////////////////////////////////////////////
+  // Creates material with random color
+  //
+  ///////////////////////////////////////////////////////////////////
+  /*function createColoredMaterial() {
+    var material = new THREE.MeshBasicMaterial({
+      color: Math.floor(Math.random() * 16777215),
+      shading: THREE.FlatShading,
+      side: THREE.DoubleSide
+    });
+    return material;
+  }*/
+  ///////////////////////////////////////////////////////////////////
+  // Creates 3D geometry to place in the scene
+  //
+  ///////////////////////////////////////////////////////////////////
+  function create3dGeometry() {
+    var text=THREE.ImageUtils.loadTexture('images/ground.png');
+        var Ground_geometry = new THREE.BoxGeometry( 100000, 0.1, 100000 );
+        var Ground_material = new THREE.MeshLambertMaterial( { map: text,
+           // color: 0xa0adaf,
+            shininess: 150,
+            specular: 0xffffff,
+            shading: THREE.SmoothShading
+        } );
+
+        var ground = new THREE.Mesh( Ground_geometry, Ground_material );
+        ground.scale.multiplyScalar( 3 );
+        ground.castShadow = false;
+        ground.receiveShadow = true;
+        glScene.add( ground );
+
+        /*Box*/
+		var tex=THREE.ImageUtils.loadTexture('images/deneme.png');
+		
+        var Box_material = new THREE.MeshBasicMaterial( {  map: tex, side: THREE.DoubleSide,
+           // color: 0xff0000,
+            shininess: 150,
+            specular: 0x222222,
+            shading: THREE.SmoothShading
+        } );
+        var geometry = new THREE.CylinderGeometry( 0, 8000, 5500,4);
+        cube = new THREE.Mesh( geometry, Box_material);
+        cube.position.set( 0,2750, 0 );
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+	    glScene.add( cube );
+		
+		
+  }
+   function guiChanged() {
+
+					var uniforms = sky.uniforms;
+					uniforms.turbidity.value = effectController.turbidity;
+					uniforms.reileigh.value = effectController.reileigh;
+					uniforms.luminance.value = effectController.luminance;
+					uniforms.mieCoefficient.value = effectController.mieCoefficient;
+					uniforms.mieDirectionalG.value = effectController.mieDirectionalG;
+
+					var theta = Math.PI * ( effectController.inclination - 0.5 );
+					var phi = 2 * Math.PI * ( effectController.azimuth - 0.5 );
+
+					sunSphere.position.x = distance * Math.cos( phi );
+					sunSphere.position.y = distance * Math.sin( phi ) * Math.sin( theta );
+					sunSphere.position.z = distance * Math.sin( phi ) * Math.cos( theta );
+
+					sunSphere.visible = effectController.sun;
+
+					sky.uniforms.sunPosition.value.copy( sunSphere.position );
+
+					//renderer.glRenderer( glScene, camera );
+
+				}
+  function gok()
+  {
+  
+  sky = new THREE.Sky();
+  var uniforms = sky.uniforms;
+  glScene.add( sky.mesh );
+  sunSphere = new THREE.Mesh(
+					new THREE.SphereBufferGeometry( 20000, 16, 8 ),
+					new THREE.MeshBasicMaterial( { color: 0xffffff } )
+				);
+				sunSphere.position.y = - - 700000;
+				sunSphere.visible = false;
+				glScene.add( sunSphere );
+				var effectController  = {
+					turbidity: 10,
+					reileigh: 2,
+					mieCoefficient: 0.005,
+					mieDirectionalG: 0.8,
+					luminance: 1,
+					inclination: 0.49, // elevation / inclination
+					azimuth: 0.25, // Facing front,
+					sun: ! true
+				};
+				var distance = 400000;
+				function guiChanged(){
+
+					//var uniforms = sky.uniforms;
+					uniforms.turbidity.value = effectController.turbidity;
+					uniforms.reileigh.value = effectController.reileigh;
+					uniforms.luminance.value = effectController.luminance;
+					uniforms.mieCoefficient.value = effectController.mieCoefficient;
+					uniforms.mieDirectionalG.value = effectController.mieDirectionalG;
+
+					var theta = Math.PI * ( effectController.inclination - 0.5 );
+					var phi = 2 * Math.PI * ( effectController.azimuth - 0.5 );
+
+					sunSphere.position.x = distance * Math.cos( phi );
+					sunSphere.position.y = distance * Math.sin( phi ) * Math.sin( theta );
+					sunSphere.position.z = distance * Math.sin( phi ) * Math.cos( theta );
+
+					sunSphere.visible = effectController.sun;
+
+					sky.uniforms.sunPosition.value.copy( sunSphere.position );
+
+					//renderer.render( scene, camera );
+}
+				
+				
+				var gui = new dat.GUI();
+                guiChanged();
+				gui.add( effectController, "turbidity", 1.0, 20.0, 0.1 ).onChange( guiChanged );
+				gui.add( effectController, "reileigh", 0.0, 4, 0.001 ).onChange( guiChanged );
+				gui.add( effectController, "mieCoefficient", 0.0, 0.1, 0.001 ).onChange( guiChanged );
+				gui.add( effectController, "mieDirectionalG", 0.0, 1, 0.001 ).onChange( guiChanged );
+				gui.add( effectController, "luminance", 0.0, 2 ).onChange( guiChanged );
+				gui.add( effectController, "inclination", 0, 1, 0.0001 ).onChange( guiChanged );
+				gui.add( effectController, "azimuth", 0, 1, 0.0001 ).onChange( guiChanged );
+				gui.add( effectController, "sun" ).onChange( guiChanged );
+				var f2 = gui.addFolder('Camera controls');
+				f2.add(camera.position, 'x', -10000,10000).step(5);
+                f2.add(camera.position, 'y', -500,5000).step(5);
+                f2.add(camera.position, 'z', -10,50000).step(5);
+   
+    
+				
+				/*var uniforms = sky.uniforms;
+					uniforms.turbidity.value = effectController.turbidity;
+					uniforms.reileigh.value = effectController.reileigh;
+					uniforms.luminance.value = effectController.luminance;
+					uniforms.mieCoefficient.value = effectController.mieCoefficient;
+					uniforms.mieDirectionalG.value = effectController.mieDirectionalG;
+
+					var theta = Math.PI * ( effectController.inclination - 0.5 );
+					var phi = 2 * Math.PI * ( effectController.azimuth - 0.5 );
+
+					sunSphere.position.x = distance * Math.cos( phi );
+					sunSphere.position.y = distance * Math.sin( phi ) * Math.sin( theta );
+					sunSphere.position.z = distance * Math.sin( phi ) * Math.cos( theta );
+
+					sunSphere.visible = effectController.sun;
+
+					sky.uniforms.sunPosition.value.copy( sunSphere.position );*/
+  }
+  
+  ///////////////////////////////////////////////////////////////////
+  // Initializes scene
+  //
+  ///////////////////////////////////////////////////////////////////
+  function initialize() {
+   
+    camera = new THREE.PerspectiveCamera(
+      60,
+      window.innerWidth / window.innerHeight,
+      100,
+      2000000);
+    camera.position.set( 100, 1700, 2500 );
+	
+      
+     //controls = new THREE.OrbitControls( camera ,cssRenderer);
+   
+	  // controls.staticMoving = true;
+		
+    glRenderer = createGlRenderer();
+    cssRenderer = createCssRenderer();
+	
+    //document.body.appendChild(glRenderer.domElement);
+    document.body.appendChild(cssRenderer.domElement);
+    cssRenderer.domElement.appendChild(glRenderer.domElement);
+    glScene = new THREE.Scene();
+    //cssScene = new THREE.Scene();
+	/////////////////
+	
+				///////////////////////////
+    var ambientLight = new THREE.AmbientLight(0x555555);
+    glScene.add(ambientLight);
+    var directionalLight = new THREE.DirectionalLight(0xffffff);
+    directionalLight.position.set( -.5, .5, -1.5 ).normalize();
+    glScene.add(directionalLight);
+    create3dPage(
+      1366, 768,
+      new THREE.Vector3(1000, 1250, -250),
+      new THREE.Vector3(0, 135 * Math.PI / 180, 0),
+      'http://www.gazi.edu.tr/');
+    create3dPage(
+     1366, 768,
+      new THREE.Vector3(1000, 1250, 1000),
+      new THREE.Vector3(0, 45 * Math.PI / 180, 0),
+      'http://ogrenci.gazi.edu.tr/');
+    create3dPage(
+      1366, 768,
+      new THREE.Vector3(-400, 1250, -100),
+      new THREE.Vector3(0, -135 * Math.PI / 180, 0),
+      'http://mf-bm.gazi.edu.tr/');
+	  create3dPage(
+      1366, 768,
+      new THREE.Vector3(-700, 1250, 1300),
+      new THREE.Vector3(0, -45 * Math.PI / 180, 0),
+      'https://gunet.gazi.edu.tr/');
+	
+    create3dGeometry();
+	gok();	
+	
+	controls = new THREE.TrackballControls(camera,glRenderer.domElement);
+    update();
+  }
+  
+  ///////////////////////////////////////////////////////////////////
+  // Updates scene
+  //
+  ///////////////////////////////////////////////////////////////////
+ function render()
+ {
+ glRenderer.clear();
+ glRenderer.render(glScene, camera);
+ cssRenderer.render(glScene, camera);
+ }
+  function update() {
+    
+  controls.update();
+ 
+  
+  
+  requestAnimationFrame(update);
+
+	render();
+	
+  }
+  
+  
+  ///////////////////////////////////////////////////////////////////
+  // On document ready
+  //
+  ///////////////////////////////////////////////////////////////////
+  $(document ).ready(function() {
+    initialize();
+  });
+  
+</script>
+</body>
+</html>
